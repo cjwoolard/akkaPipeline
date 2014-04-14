@@ -1,11 +1,8 @@
 import akka.actor.{ActorRef, Actor, Props}
 import java.net.URL
 
-class Acquisition extends Actor {
+class Acquisition(persister:ActorRef) extends Actor {
   override def preStart(): Unit = {
-
-    //val greeter = context.actorOf(Props[Greeter], "greeter")
-    //    greeter ! Greeter.Greet
   }
 
   def receive = {
@@ -16,6 +13,10 @@ class Acquisition extends Actor {
         val bot = GetOrCreateBot(hostName)
         bot ! Crawl(url)
       })
+    }
+    case offerFound: OfferFound => {
+      //context.system.eventStream.publish(offerFound)
+      persister ! Persist(offerFound.offer)
     }
   }
 
@@ -54,6 +55,8 @@ class Bot(hostName:String) extends Actor{
   def receive = {
     case Crawl(url) ⇒ {
       println("Crawling " + url)
+      val offer = Offer.DummyOffer("SomeProduct")
+      context.parent ! OfferFound(offer)
     }
   }
 }
