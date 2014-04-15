@@ -30,7 +30,12 @@ case class Persist(offer:Offer)
 case class OfferFound(offer:Offer)
 
 class ExampleSubscriber extends Actor{
-  context.system.eventStream.subscribe(self, classOf[OfferFound])
+
+  override def preStart(): Unit = {
+    //context.system.eventStream.subscribe(context.self, classOf[OfferFound])
+    println("Subscribing to OfferFound")
+  }
+
   def receive = {
     case OfferFound(offer) => println("Offer found:" + offer.listing.product.name)
   }

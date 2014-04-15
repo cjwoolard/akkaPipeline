@@ -1,12 +1,14 @@
 import akka.actor.{ActorRef, Actor, Props}
 import java.net.URL
 
+case class Crawl(url:URL){}
+case class GetOffers(client:String){}
+
 class Acquisition(persister:ActorRef) extends Actor {
-  override def preStart(): Unit = {
-  }
 
   def receive = {
     case x: GetOffers => {
+      println("Getting Offers")
       val urls = GetUrlsFor(x.client)
       urls.foreach(url => {
         val hostName = url.getHost
@@ -15,7 +17,7 @@ class Acquisition(persister:ActorRef) extends Actor {
       })
     }
     case offerFound: OfferFound => {
-      //context.system.eventStream.publish(offerFound)
+      context.system.eventStream.publish(offerFound)
       persister ! Persist(offerFound.offer)
     }
   }
@@ -40,24 +42,6 @@ class Acquisition(persister:ActorRef) extends Actor {
     val walmartUrls = (1 to 10).map(x => new URL("http://www.walmart.com/" + x))
 
     cvsUrls ++ targetUrls ++ walmartUrls
-  }
-}
-
-case class GetOffers(client:String){}
-case class Crawl(url:URL){}
-
-class Bot(hostName:String) extends Actor{
-
-  override def preStart(){
-      println("Created new Bot for " + hostName)
-  }
-
-  def receive = {
-    case Crawl(url) ⇒ {
-      println("Crawling " + url)
-      val offer = Offer.DummyOffer("SomeProduct")
-      context.parent ! OfferFound(offer)
-    }
   }
 }
 
