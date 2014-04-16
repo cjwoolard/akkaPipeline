@@ -1,21 +1,20 @@
+import java.net.URL
 import java.util.Date
 import scala.collection.immutable.HashMap
+import scala.util.Random
 
-/**
- * Created by cwoolard on 4/9/2014.
- */
-case class Offer(listing:Listing, price:Int, time: Date) {
-
-}
+case class Offer(listing:Listing, price:Double, time: Date)
 
 object Offer
 {
-  def DummyOffer(productName:String) = {
+  def DummyOffer(url:URL, productName:String) = {
     val additionalAttributes = new HashMap[String, Any]
     val brand = new Brand("Nike")
     val product = new Product(brand, productName, "desc", additionalAttributes)
-    val listing = new Listing("http://www.url.com", product, New)
+    val listing = new Listing(url, product, New)
+    val maxPrice = 100
+    val price = BigDecimal(maxPrice * Random.nextDouble()).setScale(2, BigDecimal.RoundingMode.FLOOR).toDouble
 
-    new Offer(listing, 3, new Date(2012,1,2))
+    new Offer(listing, price, new Date())
   }
 }
