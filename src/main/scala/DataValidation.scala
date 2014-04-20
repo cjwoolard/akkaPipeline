@@ -1,6 +1,7 @@
 import akka.actor.{Props, ActorRef, Actor}
 
 case class Validate(offer:Offer, rules:Set[ActorRef])
+case class RunValidationRule(offer:Offer)
 case class ValidOfferFound(offer:Offer)
 case class InvalidOfferFound(offer:Offer, failedRules:Set[String])
 case class ValidationRulePassed(rule:ActorRef)
@@ -18,9 +19,9 @@ class DataValidation extends Actor {
   )
 
   def receive = {
-    case OfferFound(offerFound) => {
+    case OfferFound(offer) => {
       val validator = context.actorOf(Props[Validator])
-      validator ! Validate(offerFound, rules)
+      validator ! Validate(offer, rules)
     }
     case ValidOfferFound(offer) => eventStream.publish(new ValidOfferFound(offer))
     case InvalidOfferFound(offer, failures) => eventStream.publish(new InvalidOfferFound(offer, failures))
@@ -31,16 +32,20 @@ class Validator() extends Actor {
 
   def receive = {
     case Validate(offer, rules) =>{
+      println("Validate " + rules.size)
       context.become(runRules(offer, Set.empty[ActorRef], Set.empty[ValidationError]))
+      for(rule <- rules) rule ! RunValidationRule(offer)
     }
   }
 
   def runRules(offer:Offer, rules:Set[ActorRef], validationErrors:Set[ValidationError]): Receive = {
     case ValidationRulePassed(rule) => {
+      println("ValidationRulePassed " + rule)
       context.become(runRules(offer, rules-rule, validationErrors))
       CheckAllRulesCompleted(offer, rules, validationErrors)
     }
     case ValidationRuleFailed(rule, failure:ValidationError) => {
+      println("ValidationRuleFailed " + rule)
       context.become(runRules(offer, rules-rule, validationErrors+failure))
       CheckAllRulesCompleted(offer, rules, validationErrors)
     }

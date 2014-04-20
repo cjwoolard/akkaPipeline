@@ -3,7 +3,7 @@ import akka.actor.Actor
 class PriceBoundsRule extends Actor{
 
   def receive = {
-    case Validate(offer) => {
+    case RunValidationRule(offer) => {
       println("Validating Price: " + offer.price)
       if(offer.price>80) {
         println("*************Failed Price Bounds Rule*****************")
