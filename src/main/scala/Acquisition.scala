@@ -9,7 +9,9 @@ import scala.concurrent.duration.Duration
 
 case class GetOffers(client:String){}
 
-class Acquisition(persister:ActorRef) extends Actor {
+class Acquisition(persister:ActorRef, dataValidation:ActorRef) extends Actor {
+
+  val settings = Settings(context.system)
 
   def receive = {
     case x: GetOffers => {
@@ -21,8 +23,9 @@ class Acquisition(persister:ActorRef) extends Actor {
       })
     }
     case offerFound: OfferFound => {
-      context.system.eventStream.publish(offerFound)
       persister ! Persist(offerFound.offer)
+      dataValidation ! offerFound
+      context.system.eventStream.publish(offerFound)
     }
   }
 
@@ -32,19 +35,30 @@ class Acquisition(persister:ActorRef) extends Actor {
         existing
       }
       case _ => {
-        val bot = context.actorOf(Props(new Bot(hostName)))
-        val rate = new Rate(1, Duration(5, TimeUnit.SECONDS))
-        val throttler = context.actorOf(Props(new TimerBasedThrottler(rate)), hostName)
-        throttler ! SetTarget(Some(bot))
-        throttler
+        settings.Bots(hostName) match{
+          case Some(configuration) => {
+            val bot = context.actorOf(Props(new Bot(hostName)))
+            val duration = Duration(configuration.NumberOfSeconds, TimeUnit.SECONDS)
+            val rate = new Rate(configuration.NumberOfMessages, duration)
+            val throttler = context.actorOf(Props(new TimerBasedThrottler(rate)), hostName)
+            println(s"Created throttled bot $hostName ($rate every $duration seconds max")
+            throttler ! SetTarget(Some(bot))
+            throttler
+          }
+          case None => {
+            println(s"Created unthrottled bot $hostName")
+            context.actorOf(Props(new Bot(hostName)), hostName)
+          }
+        }
       }
     }
   }
 
   def GetUrlsFor(client: String): IndexedSeq[URL] = {
-    val cvsUrls = (1 to 10).map(x => new URL("http://www.cvs.com/" + x))
-    val targetUrls = (1 to 10).map(x => new URL("http://www.target.com/" + x))
-    val walmartUrls = (1 to 10).map(x => new URL("http://www.walmart.com/" + x))
+    val numberOfUrlsPerBot = settings.NumberOfUrlsPerBot
+    val cvsUrls = (1 to numberOfUrlsPerBot).map(x => new URL("http://www.cvs.com/" + x))
+    val targetUrls = (1 to numberOfUrlsPerBot).map(x => new URL("http://www.target.com/" + x))
+    val walmartUrls = (1 to numberOfUrlsPerBot).map(x => new URL("http://www.walmart.com/" + x))
 
     cvsUrls ++ targetUrls ++ walmartUrls
   }

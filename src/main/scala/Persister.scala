@@ -1,37 +1,34 @@
 import akka.actor.Actor
 import com.mongodb.casbah.Imports._
+import com.novus.salat._
+import com.novus.salat.global._
 
 case class Persist(offer:Offer)
 case class OfferFound(offer:Offer)
 
 class Persister extends Actor {
   var client = MongoClient()
+
   override def preStart(): Unit = {
     val settings = Settings(context.system)
     client = MongoClient(settings.Mongo.Host, settings.Mongo.Port)
   }
 
   def receive = {
-    case Persist(offer) ⇒ {
-      println("Persisting " + offer.listing.url)
-      val db = client("Acquisition")
-      val offers = db("offers")
-
-      val toPersist = MongoDBObject("url" -> offer.listing.url.toString())
-      offers.insert(toPersist)
-    }
-  }
-}
-
-class ExampleSubscriber extends Actor{
-
-  override def preStart(): Unit = {
-    context.system.eventStream.subscribe(context.self, classOf[OfferFound])
+    case Persist(offer) ⇒ SaveOffer(offer)
   }
 
-  def receive = {
-    case OfferFound(offer) => {
-      println("Offer found:" + offer.listing.product.name + " at " + offer.price)
-    }
+  def SaveOffer(offer:Offer){
+    val db = client("Acquisition")
+    val offers = db("offers")
+    val dbo = grater[Offer].asDBObject(offer)
+    offers.insert(dbo)
+  }
+
+  def Save(offer:Offer){
+    val db = client("Acquisition")
+    val offers = db("offers")
+    val dbo = grater[Offer].asDBObject(offer)
+    offers.insert(dbo)
   }
 }

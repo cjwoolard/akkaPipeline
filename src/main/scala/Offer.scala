@@ -9,8 +9,7 @@ object Offer
 {
   def DummyOffer(url:URL, productName:String) = {
     val additionalAttributes = new HashMap[String, Any]
-    val brand = new Brand("Nike")
-    val product = new Product(brand, productName, "desc", additionalAttributes)
+    val product = new Product("Nike", productName, "desc", additionalAttributes)
     val listing = new Listing(url, product, New)
     val maxPrice = 100
     val price = BigDecimal(maxPrice * Random.nextDouble()).setScale(2, BigDecimal.RoundingMode.FLOOR).toDouble

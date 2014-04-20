@@ -6,7 +6,7 @@ case class Crawl(url:URL){}
 class Bot(hostName:String) extends Actor{
 
   override def preStart(){
-    println("Created new Bot for " + hostName)
+    println(s"Bot starting $hostName")
   }
 
   def receive = {
