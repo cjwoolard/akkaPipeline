@@ -1,13 +1,13 @@
-import akka.actor.Actor
+import akka.actor.{Props, ActorRef, Actor}
 
-class ProductNameRule  extends Actor{
+class ProductNameRules extends CompositeValidationRule[Offer] {
 
-  def receive = {
-    case RunValidationRule(offer) => {
-      println("Validating Product Name: " + offer.listing.product.name)
-      if(offer.listing.product.name.length==0) {
-        println("*************Failed Product Name Rule*****************")
-      }
-    }
-  }
+  val rules = Set[ActorRef](
+    context.actorOf(Props[ProductNameRequiredRule], "productNameRequiredRule")
+  )
+}
+
+class ProductNameRequiredRule extends SimpleRule[Offer] {
+  override def check(offer: Offer) = offer.listing.condition.length > 0
+  override def failureMessage = "Product name required"
 }

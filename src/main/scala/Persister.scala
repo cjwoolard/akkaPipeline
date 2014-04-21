@@ -3,11 +3,14 @@ import com.mongodb.casbah.Imports._
 import com.novus.salat._
 import com.novus.salat.global._
 
-case class Persist(offer:Offer)
+case class PersistOffer(offer:Offer){}
+case class PersistQuarantinedOffer(offer:QuarantinedOffer)
+
 case class OfferFound(offer:Offer)
 
 class Persister extends Actor {
   var client = MongoClient()
+  val clientName = "Acquisition"
 
   override def preStart(): Unit = {
     val settings = Settings(context.system)
@@ -15,20 +18,21 @@ class Persister extends Actor {
   }
 
   def receive = {
-    case Persist(offer) ⇒ SaveOffer(offer)
+    case PersistOffer(offer) ⇒ SaveOffer(offer)
+    case PersistQuarantinedOffer(quarantinedOffer) ⇒ SaveQuarantinedOffer(quarantinedOffer)
   }
 
   def SaveOffer(offer:Offer){
-    val db = client("Acquisition")
-    val offers = db("offers")
+    val db = client(clientName)
+    val offers = db("CollectedOffers")
     val dbo = grater[Offer].asDBObject(offer)
     offers.insert(dbo)
   }
 
-  def Save(offer:Offer){
-    val db = client("Acquisition")
-    val offers = db("offers")
-    val dbo = grater[Offer].asDBObject(offer)
+  def SaveQuarantinedOffer(quarantinedOffer:QuarantinedOffer){
+    val db = client(clientName)
+    val offers = db("QuarantinedOffers")
+    val dbo = grater[QuarantinedOffer].asDBObject(quarantinedOffer)
     offers.insert(dbo)
   }
 }

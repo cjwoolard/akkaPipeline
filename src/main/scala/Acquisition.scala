@@ -1,6 +1,4 @@
-import akka.actor.{ActorRef, Actor, Props}
-import akka.contrib._
-
+import akka.actor.{ActorLogging, ActorRef, Actor, Props}
 import akka.contrib.throttle.Throttler.{Rate, SetTarget}
 import akka.contrib.throttle.TimerBasedThrottler
 import java.net.URL
@@ -9,7 +7,7 @@ import scala.concurrent.duration.Duration
 
 case class GetOffers(client:String){}
 
-class Acquisition(persister:ActorRef, dataValidation:ActorRef) extends Actor {
+class Acquisition(persister:ActorRef, dataValidation:ActorRef) extends Actor with ActorLogging {
 
   val settings = Settings(context.system)
 
@@ -23,34 +21,16 @@ class Acquisition(persister:ActorRef, dataValidation:ActorRef) extends Actor {
       })
     }
     case offerFound: OfferFound => {
-      persister ! Persist(offerFound.offer)
-      dataValidation ! offerFound
-      context.system.eventStream.publish(offerFound)
-    }
-  }
-
-  def GetOrCreateBot(hostName:String) : ActorRef = {
-    context.child(hostName) match {
-      case Some(existing) => {
-        existing
-      }
-      case _ => {
-        settings.Bots(hostName) match{
-          case Some(configuration) => {
-            val bot = context.actorOf(Props(new Bot(hostName)))
-            val duration = Duration(configuration.NumberOfSeconds, TimeUnit.SECONDS)
-            val rate = new Rate(configuration.NumberOfMessages, duration)
-            val throttler = context.actorOf(Props(new TimerBasedThrottler(rate)), hostName)
-            println(s"Created throttled bot $hostName ($rate every $duration seconds max")
-            throttler ! SetTarget(Some(bot))
-            throttler
-          }
-          case None => {
-            println(s"Created unthrottled bot $hostName")
-            context.actorOf(Props(new Bot(hostName)), hostName)
-          }
+      try {
+        persister ! PersistOffer(offerFound.offer)
+        //dataValidation ! offerFound
+        context.system.eventStream.publish(offerFound)
+      } catch {
+        case e: Exception => {
+          log.error("Error in Acquisition", e.getMessage())
         }
       }
+
     }
   }
 
@@ -61,5 +41,30 @@ class Acquisition(persister:ActorRef, dataValidation:ActorRef) extends Actor {
     val walmartUrls = (1 to numberOfUrlsPerBot).map(x => new URL("http://www.walmart.com/" + x))
 
     cvsUrls ++ targetUrls ++ walmartUrls
+  }
+
+  def GetOrCreateBot(hostName:String) : ActorRef = {
+      context.child(hostName) match {
+      case Some(existing) => {
+        existing
+      }
+      case _ => {
+        settings.Bots(hostName) match{
+          case Some(configuration) => {
+            val bot = context.actorOf(Props(new Bot(hostName)))
+            val duration = Duration(configuration.NumberOfSeconds, TimeUnit.SECONDS)
+            val rate = new Rate(configuration.NumberOfMessages, duration)
+            val throttler = context.actorOf(Props(new TimerBasedThrottler(rate)), hostName)
+            log.debug(s"Created throttled bot $hostName ($rate every $duration seconds max")
+            throttler ! SetTarget(Some(bot))
+            throttler
+          }
+          case None => {
+            log.debug(s"Created unthrottled bot $hostName")
+            context.actorOf(Props(new Bot(hostName)), hostName)
+          }
+        }
+      }
+    }
   }
 }

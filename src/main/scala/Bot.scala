@@ -1,17 +1,17 @@
-import akka.actor.Actor
+import akka.actor.{ActorLogging, Actor}
 import java.net.URL
 
 case class Crawl(url:URL){}
 
-class Bot(hostName:String) extends Actor{
+class Bot(hostName:String) extends Actor with ActorLogging {
 
   override def preStart(){
-    println(s"Bot starting $hostName")
+    log.debug(s"Bot starting $hostName")
   }
 
   def receive = {
     case Crawl(url) ⇒ {
-      println("Crawling " + url)
+      log.debug("Crawling " + url)
       val offer = Offer.DummyOffer(url, "SomeProduct")
       context.parent ! OfferFound(offer)
     }

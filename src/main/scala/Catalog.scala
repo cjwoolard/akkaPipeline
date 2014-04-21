@@ -1,7 +1,9 @@
-import akka.actor.{ActorRef, Actor}
+import akka.actor.{ActorLogging, ActorRef, Actor}
 
-class Catalog(persister:ActorRef) extends Actor {
+case class AddToCatalog(offer:Offer)
+
+class Catalog(persister:ActorRef) extends Actor with ActorLogging {
   def receive = {
-    case ValidOfferFound(offer) => persister ! Persist(offer)
+    case AddToCatalog(offer:Offer)=> log.debug("Adding to catalog " + offer)
   }
 }

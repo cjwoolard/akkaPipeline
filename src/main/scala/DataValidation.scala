@@ -1,63 +1,40 @@
-import akka.actor.{Props, ActorRef, Actor}
+import akka.actor.{ActorLogging, Props, ActorRef, Actor}
 
-case class Validate(offer:Offer, rules:Set[ActorRef])
-case class RunValidationRule(offer:Offer)
+case class Validate[T](value:T)
 case class ValidOfferFound(offer:Offer)
-case class InvalidOfferFound(offer:Offer, failedRules:Set[String])
-case class ValidationRulePassed(rule:ActorRef)
-case class ValidationRuleFailed(rule:ActorRef, failure:ValidationError)
-case class ValidationError(message:String)
+case class InvalidOfferFound(offer:Offer, failedRules:Set[ValidationFailure])
+case class ValidationPassed[T](value:T)
+case class ValidationFailed[T](value:T, failedRules:Set[ValidationFailure])
+case class ValidationFailure(message:String)
 
-class DataValidation extends Actor {
+class DataValidation(catalog:ActorRef, quarantine:ActorRef) extends Actor with ActorLogging {
 
   val eventStream = context.system.eventStream
 
-  val rules = Set[ActorRef](
-    context.actorOf(Props[PriceBoundsRule], "priceBoundsRule"),
-    context.actorOf(Props[ProductNameRule], "productNameRule"),
-    context.actorOf(Props[ConditionRule], "conditionRule")
-  )
+  override def preStart = {
+    eventStream.subscribe(self, classOf[OfferFound])
+  }
 
   def receive = {
     case OfferFound(offer) => {
-      val validator = context.actorOf(Props[Validator])
-      validator ! Validate(offer, rules)
+       val validator = context.actorOf(Props[OfferRules], "offerRules" + offer.id)
+      validator ! Validate(offer)
     }
-    case ValidOfferFound(offer) => eventStream.publish(new ValidOfferFound(offer))
-    case InvalidOfferFound(offer, failures) => eventStream.publish(new InvalidOfferFound(offer, failures))
+    case ValidationPassed(offer:Offer) => {
+      //log.debug("Valid Offer Found " + offer)
+      catalog ! AddToCatalog(offer)
+      eventStream.publish(new ValidOfferFound(offer))
+    }
+    case ValidationFailed(offer:Offer, failures) => {
+      //log.debug("Invalid Offer Found  " + failures.map(x=>x.message).mkString(", ") + " " + offer)
+      quarantine ! Quarantine(offer, failures)
+      eventStream.publish(new InvalidOfferFound(offer, failures))
+    }
+    case _ => {
+      log.warning("Unexpected message")
+    }
   }
 }
 
-class Validator() extends Actor {
 
-  def receive = {
-    case Validate(offer, rules) =>{
-      println("Validate " + rules.size)
-      context.become(runRules(offer, Set.empty[ActorRef], Set.empty[ValidationError]))
-      for(rule <- rules) rule ! RunValidationRule(offer)
-    }
-  }
-
-  def runRules(offer:Offer, rules:Set[ActorRef], validationErrors:Set[ValidationError]): Receive = {
-    case ValidationRulePassed(rule) => {
-      println("ValidationRulePassed " + rule)
-      context.become(runRules(offer, rules-rule, validationErrors))
-      CheckAllRulesCompleted(offer, rules, validationErrors)
-    }
-    case ValidationRuleFailed(rule, failure:ValidationError) => {
-      println("ValidationRuleFailed " + rule)
-      context.become(runRules(offer, rules-rule, validationErrors+failure))
-      CheckAllRulesCompleted(offer, rules, validationErrors)
-    }
-  }
-
-  def CheckAllRulesCompleted(offer:Offer, rules:Set[ActorRef], validationErrors:Set[ValidationError]) = {
-    val message = rules.isEmpty match {
-      case true =>  new ValidOfferFound(offer)
-      case false => new InvalidOfferFound(offer, validationErrors.map(x=>x.message))
-    }
-    context.parent ! message
-    context.stop(self)
-  }
-}
 

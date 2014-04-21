@@ -1,14 +1,5 @@
-import akka.actor.Actor
 
-class PriceBoundsRule extends Actor{
-
-  def receive = {
-    case RunValidationRule(offer) => {
-      println("Validating Price: " + offer.price)
-      if(offer.price>80) {
-        println("*************Failed Price Bounds Rule*****************")
-        println(offer.listing.product.name + " is " + offer.price)
-      }
-    }
-  }
+class PriceBoundsRule extends SimpleRule[Offer] {
+  override def check(offer: Offer) = offer.price > 0 && offer.price < 80
+  override def failureMessage = "Offer price must be within bounds"
 }
