@@ -7,10 +7,10 @@ trait SimpleRule[TInput] extends Actor with ActorLogging {
 
   def receive = {
     case Validate(value:TInput) => {
-      context.parent ! (if(check(value))ValidationPassed(value) else ValidationFailed(value, Set(ValidationFailure(failureMessage))))
+      sender ! (if(check(value))ValidationPassed(value) else ValidationFailed(value, Set(ValidationFailure(failureMessage))))
     }
-    case _=> {
-      log.warning("Unexpected message")
+    case (message:Any) => {
+      log.warning(s"Unexpected message $message from $sender")
     }
   }
 }

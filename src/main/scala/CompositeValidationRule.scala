@@ -6,32 +6,57 @@ trait CompositeValidationRule[T] extends Actor with ActorLogging {
 
   def receive = {
     case Validate(value:T) =>{
-      context.become(runRules(value, rules, Set.empty[ValidationFailure]))
-      for(rule <- rules) {
-        rule ! Validate(value)
-      }
+      //println("Validating: " + value)
+//      context.become(runRules(sender, value, rules, Set.empty[ValidationFailure]))
+      context.become(waitForRulesToComplete2)
+      //for(rule <- rules) rule ! Validate(value)
     }
-    case _ => {
+    case (message:Any) => {
       log.warning("Unexpected message")
     }
   }
 
-  def runRules(value:T, rulesRemaining:Set[ActorRef], validationErrors:Set[ValidationFailure]): Receive = {
+  def waitForRulesToComplete2 : Receive =
+  {
+    case (message:Any) => {
+      log.warning("Unexpected message")
+    }
+  }
+
+  def waitForRulesToComplete(requestor:ActorRef) : Receive =
+  {
+//    case ValidationPassed(valuePassed:T) => {
+//      println("Rule Passed: " + sender.path)
+//      context.become(waitForRulesToComplete(requestor)
+//      //CheckAllRulesCompleted(requestor, valuePassed, rulesRemaining - sender, validationErrors)
+//    }
+//    case ValidationFailed(valuePassed:T, failures) => {
+//      println("Rule Failed: " + sender.path)
+//      context.become(waitForRulesToComplete(requestor, count+1))
+//      //CheckAllRulesCompleted(requestor, valuePassed, rulesRemaining - sender, validationErrors ++ failures)
+//    }
+    case (message:Any) => {
+      log.warning("Unexpected message")
+    }
+  }
+
+  def runRules(requestor:ActorRef, value:T, rulesRemaining:Set[ActorRef], validationErrors:Set[ValidationFailure]): Receive = {
     case ValidationPassed(valuePassed:T) => {
-      context.become(runRules(valuePassed, rulesRemaining - sender, validationErrors))
-      CheckAllRulesCompleted(valuePassed, rulesRemaining - sender, validationErrors)
+      context.become(runRules(requestor, valuePassed, rulesRemaining - sender, validationErrors))
+      CheckAllRulesCompleted(requestor, valuePassed, rulesRemaining - sender, validationErrors)
     }
     case ValidationFailed(valuePassed:T, failures) => {
-      context.become(runRules(valuePassed, rulesRemaining - sender, validationErrors ++ failures))
-      CheckAllRulesCompleted(valuePassed, rulesRemaining - sender, validationErrors)
-    }case _ => {
-      log.warning("Unexpected message")
+      context.become(runRules(requestor, valuePassed, rulesRemaining - sender, validationErrors ++ failures))
+      CheckAllRulesCompleted(requestor, valuePassed, rulesRemaining - sender, validationErrors ++ failures)
+    }
+    case (message:Any) => {
+      log.warning(s"Unexpected message $message from $sender")
     }
   }
 
-  def CheckAllRulesCompleted(value:T, rulesRemaining:Set[ActorRef], validationErrors:Set[ValidationFailure]) = {
+  def CheckAllRulesCompleted(requestor:ActorRef, value:T, rulesRemaining:Set[ActorRef], validationErrors:Set[ValidationFailure]) = {
     if(rulesRemaining.isEmpty) {
-      context.parent ! (if(validationErrors.isEmpty) ValidationPassed(value) else new ValidationFailed(value, validationErrors))
+      requestor ! (if(validationErrors.isEmpty) ValidationPassed(value) else new ValidationFailed(value, validationErrors))
       context.stop(self)
     }
   }

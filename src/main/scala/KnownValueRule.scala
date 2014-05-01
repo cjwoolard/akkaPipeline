@@ -9,12 +9,12 @@ trait KnownValueRule[T] extends Actor with ActorLogging {
     case Validate(value:T) => {
       val toCheck = valueToCheck(value)
       knownValues.find(x=>valueToCheck(value).compareToIgnoreCase(x)==0) match {
-        case Some(knownValue:String) => context.parent ! ValidationPassed(value)
-        case None => context.parent ! ValidationFailed(value, Set(ValidationFailure(s"'$toCheck' is not in expected set [" + knownValues.mkString(", ") + "]")))
+        case Some(knownValue:String) => sender ! ValidationPassed(value)
+        case None => sender ! ValidationFailed(value, Set(ValidationFailure(s"'$toCheck' is not in expected set [" + knownValues.mkString(", ") + "]")))
       }
     }
-    case _=> {
-      log.warning("Unexpected message")
+    case (message:Any) => {
+      log.warning(s"Unexpected message $message from $sender")
     }
   }
 }

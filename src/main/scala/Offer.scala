@@ -7,7 +7,7 @@ case class Offer(id:UUID, listing:Listing, price:Double, time: Date)
 
 object Offer
 {
-  def DummyOffer(url:URL, productName:String) = {
+  def DummyOffer(url:URL, productName:String, condition:String = "New") = {
     val random = Random.nextInt(10)
     val randomizedProductName = if(random%2==0) "" else productName
     val randomizedCondition = if(random%8==0) "" else "new"

@@ -30,8 +30,8 @@ class DataValidation(catalog:ActorRef, quarantine:ActorRef) extends Actor with A
       quarantine ! Quarantine(offer, failures)
       eventStream.publish(new InvalidOfferFound(offer, failures))
     }
-    case _ => {
-      log.warning("Unexpected message")
+    case (message:Any) => {
+      log.warning(s"Unexpected message $message from $sender")
     }
   }
 }

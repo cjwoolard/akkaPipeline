@@ -1,16 +1,18 @@
 import akka.actor.ActorSystem
 import akka.actor.Actor
-import akka.testkit.{TestKit, TestActorRef}
+import akka.testkit.{ImplicitSender, TestKit, TestActorRef}
 import java.net.URL
 import java.util.Date
-import org.scalatest.MustMatchers
-import org.scalatest.WordSpec
+import org.scalatest.{WordSpecLike, MustMatchers, WordSpec}
 import scala.collection.immutable.HashMap
+import scala.concurrent.duration.Duration
 import scala.util.Random
+import scala.concurrent.duration._
 
 class ProductNameSpec extends TestKit(ActorSystem("productNameSpec"))
-with WordSpec
+with WordSpecLike
 with MustMatchers
+with ImplicitSender
 {
   "An unresolved offer" must {
     val rule = TestActorRef[ProductNameRequiredRule]
@@ -19,7 +21,8 @@ with MustMatchers
       val offer = DummyOffer("")
       rule ! Validate(offer)
 
-      expectMsg(ValidationFailed(offer, Set(ValidationFailure("Product name required")))
+      val x = receiveOne(1 second)
+      expectMsg(ValidationFailed(offer, Set(ValidationFailure("Product name required"))))
     }
   }
 
