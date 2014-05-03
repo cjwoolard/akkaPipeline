@@ -3,7 +3,7 @@ import java.util.{UUID, Date}
 import scala.collection.immutable.HashMap
 import scala.util.Random
 
-case class Offer(id:UUID, listing:Listing, price:Double, time: Date)
+case class Offer(id:UUID, listing:Listing, price:Double, shippingCost:Double, time: Date)
 
 object Offer
 {
@@ -13,11 +13,12 @@ object Offer
     val randomizedCondition = if(random%8==0) "" else "new"
     val maxPrice = 100
     val price = BigDecimal(maxPrice * Random.nextDouble()).setScale(2, BigDecimal.RoundingMode.FLOOR).toDouble
+    val shippingCost = BigDecimal(maxPrice * Random.nextDouble()).setScale(2, BigDecimal.RoundingMode.FLOOR).toDouble
 
-    val additionalAttributes = new HashMap[String, Any]
+    val additionalAttributes = new HashMap[String, String]
     val product = new Product("Nike", randomizedProductName, "desc", additionalAttributes)
-    val listing = new Listing(url, product, randomizedCondition)
+    val listing = new Listing(url, product,"seller", randomizedCondition,Set())
 
-    new Offer(java.util.UUID.randomUUID, listing, price, new Date())
+    new Offer(java.util.UUID.randomUUID, listing, price, shippingCost, new Date())
   }
 }

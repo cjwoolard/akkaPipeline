@@ -40,9 +40,9 @@ with ImplicitSender {
   }
 
   "Invalid Condition" in {
-    val product = new Product("Nike", "productOne", "desc", new HashMap[String,Any]())
-    val listing = new Listing(new URL("http://www.aa.com") , product, "")
-    val offer = new Offer(java.util.UUID.randomUUID, listing, 1.23, new Date())
+    val product = new Product("Nike", "productOne", "desc", new HashMap[String,String]())
+    val listing = new Listing(new URL("http://www.aa.com") , product, "", "", Set())
+    val offer = new Offer(java.util.UUID.randomUUID, listing, 1.23, 2.34, new Date())
 
     val rules = TestActorRef(Props[ConditionRules])
 
